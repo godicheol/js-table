@@ -65,53 +65,43 @@
         return true;
     }
 
-    var formatters = {
-        boolean: function(value) {
-            if (value === "") {
-                return undefined;
+    var setters = {
+        boolean: function(input, value) {
+            if (isBoolean(value) && toBoolean(value) === true) {
+                input.checked = true;
+            } else {
+                input.checked = false;
             }
-            if (isBoolean(value)) {
-                return toBoolean(value);
-            }
-            if (isUndefined(value)) {
-                return undefined;
-            }
-            if (isNull(value)) {
-                return null;
-            }
-            throw new Error("Invalid argument type");
         },
-        number: function(value) {
-            if (value === "") {
-                return undefined;
-            }
+        number: function(input, value) {
             if (isNumber(value)) {
-                return toNumber(value);
+                input.value = toNumber(value);
+            } else {
+                input.value = 0;
             }
-            if (isUndefined(value)) {
-                return undefined;
-            }
-            if (isNull(value)) {
-                return null;
-            }
-            throw new Error("Invalid argument type");
         },
-        string: function(value) {
-            if (value === "") {
-                return undefined;
+        string: function(input, value) {
+            if (isUndefinedStrict(value) || isNullStrict(value)) {
+                input.value = "";
+            } else if (isString(value)) {
+                input.value = toString(value);
+            } else {
+                input.value = "";
             }
-            if (isString(value)) {
-                return toString(value);
-            }
-            if (isUndefined(value)) {
-                return undefined;
-            }
-            if (isNull(value)) {
-                return null;
-            }
-            throw new Error("Invalid argument type");
-        }
+        },
     }
+    var getters = {
+        checkbox: function(input) {
+            return input.checked;
+        },
+        number: function(input) {
+            return input.value ? parseFloat(input.value) : 0;
+        },
+        input: function(input) {
+            return input.value.trim() !== "" ? input.value : undefined;
+        },
+    }
+
     // constructor
 
     function JsTable() {
@@ -121,6 +111,11 @@
         this.tbody = null;
         this.tfoot = null;
         this.columns = {}; // column settings
+        /*
+            name: {
+                type: "string" // boolean, number, string
+            }
+        */
         this.rows = {}; // row element
         this.data = []; // JSON data
     }
@@ -161,6 +156,14 @@
             throw new Error("Table body not found");
         }
 
+        var editHandler = function(e) {
+            var key = e.target.getAttribute("data-key");
+            var _id = e.target.getAttribute("data-id");
+            var getter = getters[e.target.type];
+            this.update({_id: _id}, {[key]: getter(e.target)});
+        }
+        editHandler = editHandler.bind(this);
+
         var row;
         if (this.rows[record._id]) {
             row = this.rows[record._id];
@@ -174,21 +177,14 @@
         for (var [key, options] of Object.entries(this.columns)) {
             var cell = document.createElement("td");
             var value = record[key];
+            var setter = setters[options.type];
             if (!options.edit) {
                 cell.innerHTML = value;
             } else {
                 var input = document.createElement("input");
-                var formatter;
-                if (options && options.type) {
-                    formatter = formatters[options.type];
-                } else {
-                    formatter = formatters["string"];
-                }
-                var editHandler = function(e) {
-                    this.update({_id: record._id}, {[key]: formatter(e.target.value)});
-                }
-                editHandler = editHandler.bind(this);
                 input.addEventListener("change", editHandler);
+                input.setAttribute("data-key", key);
+                input.setAttribute("data-id", record._id);
                 input.value = formatter(value) || "";
                 cell.appendChild(input);
             }
