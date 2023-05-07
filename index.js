@@ -53,82 +53,74 @@
         return getType(element) === "htmldivelement";
     }
     function isValidColumns(columns) {
-        if (getType(columns) !== "object") {
+        if (getType(columns) !== "array") {
             return false;
         }
-        var values = Object.values(columns);
-        for (var value of values) {
-            if (getType(value) !== "object") {
+        for (var col of columns) {
+            if (getType(col) !== "object") {
+                return false;
+            }
+            // required
+            if (getType(col.type) !== "string") {
+                return false;
+            }
+            // required
+            if (getType(col.field) !== "string") {
+                return false;
+            }
+            // optional
+            if (["undefined", "string"].indexOf(col.title) < 0) {
+                return false;
+            }
+            // optional
+            if (["undefined", "boolean"].indexOf(col.edit) < 0) {
+                return false;
+            }
+            // optional
+            if (["undefined", "function"].indexOf(col.format) < 0) {
                 return false;
             }
         }
         return true;
     }
 
-    var setters = {
-        boolean: function(input, value) {
-            if (isBoolean(value) && toBoolean(value) === true) {
-                input.checked = true;
-            } else {
-                input.checked = false;
+    function renderCell(column, record) {
+        var cell = document.createElement("th");
+        var field = col.field;
+        var type = col.type; // boolean, number, string, link, image
+        var edit = col.edit;
+        var value = record[field];
+
+        if (type === "boolean") {
+            if (!edit) {
+                cell.innerHTML = value;
             }
-        },
-        number: function(input, value) {
-            if (isNumber(value)) {
-                input.value = toNumber(value);
-            } else {
-                input.value = 0;
-            }
-        },
-        string: function(input, value) {
-            if (isUndefinedStrict(value) || isNullStrict(value)) {
-                input.value = "";
-            } else if (isString(value)) {
-                input.value = toString(value);
-            } else {
-                input.value = "";
-            }
-        },
-    }
-    var getters = {
-        checkbox: function(input) {
-            return input.checked;
-        },
-        number: function(input) {
-            return input.value ? parseFloat(input.value) : 0;
-        },
-        input: function(input) {
-            return input.value.trim() !== "" ? input.value : undefined;
-        },
+        }
+
+        var cell = document.createElement("td");
+        var value = record[key];
+        var setter = setters[options.type];
+        if (!options.edit) {
+            cell.innerHTML = value;
+        } else {
+            var input = document.createElement("input");
+            input.addEventListener("change", editHandler);
+            input.setAttribute("data-key", key);
+            input.setAttribute("data-id", record._id);
+            input.value = formatter(value) || "";
+            cell.appendChild(input);
+        }
+        row.appendChild(cell);
     }
 
     // constructor
 
-    function JsTable() {
-        this.container = null;
-        this.table = null;
-        this.thead = null;
-        this.tbody = null;
-        this.tfoot = null;
-        this.columns = {}; // column settings
-        /*
-            name: {
-                type: "string" // boolean, number, string
-            }
-        */
-        this.rows = {}; // row element
-        this.data = []; // JSON data
-    }
-    // <div> only
-    JsTable.prototype.init = function(element, columns) {
+    function JsTable(element) {
         if (!isValidContainer(element)) {
-            throw new Error("Invalid argument type", element);
+            throw new Error("Invalid argument type");
         }
-        if (!isValidColumns(columns)) {
-            throw new Error("Invalid argument type", columns);
-        }
+
         this.container = element;
-        this.columns = columns;
         this.table = document.createElement("table");
         this.thead = document.createElement("thead");
         this.tbody = document.createElement("tbody");
@@ -139,14 +131,35 @@
         this.table.appendChild(this.tfoot);
         this.container.appendChild(this.table);
 
+        this.columns = []; // column settings
+        this.data = []; // JSON data
+    }
+    // <div> only
+    JsTable.prototype.init = function(columns) {
+        if (!isValidColumns(columns)) {
+            throw new Error("Invalid argument type");
+        }
+
         // render table head
         var row = document.createElement("tr");
-        for (var [key, options] of Object.entries(this.columns)) {
+        for (var col of this.columns) {
             var cell = document.createElement("th");
-            var value = options.title || key;
-            cell.innerHTML= value;
+            var title = col.title || col.field;
+            var field = col.field;
+            var type = col.type; // boolean, number, string, link, image
+
+            // if (!field) {
+            //     throw new Error("Invalid argument type");
+            // }
+            if (["boolean", "number", "string", "link", "image"].indexOf(type) < 0) {
+                throw new Error("Invalid argument type");
+            }
+
+            cell.innerHTML = title;
             row.appendChild(cell);
         }
+
+        this.columns = columns;
         this.thead.innerHTML = "";
         this.thead.appendChild(row);
     }
@@ -157,24 +170,30 @@
         }
 
         var editHandler = function(e) {
-            var key = e.target.getAttribute("data-key");
-            var _id = e.target.getAttribute("data-id");
-            var getter = getters[e.target.type];
-            this.update({_id: _id}, {[key]: getter(e.target)});
+            console.log(record);
+            // this.update({_id: _id}, {[key]: getter(e.target)});
         }
         editHandler = editHandler.bind(this);
 
         var row;
-        if (this.rows[record._id]) {
-            row = this.rows[record._id];
+        if (record.__element__) {
+            row = record.__element__;
         } else {
             row = document.createElement("tr");
-            this.rows[record._id] = row;
+            record.__element__ = row;
             this.tbody.appendChild(row);
         }
 
         row.innerHTML = "";
-        for (var [key, options] of Object.entries(this.columns)) {
+        for (var col of this.columns) {
+            var cell = document.createElement("th");
+            var title = col.title || col.field;
+            var field = col.field;
+            var type = col.type; // boolean, number, string, link, image
+
+
+
+
             var cell = document.createElement("td");
             var value = record[key];
             var setter = setters[options.type];
