@@ -1,0 +1,21 @@
+{
+  "name": "js-table",
+  "version": "1.0.0",
+  "description": "description",
+  "main": "index.js",
+  "scripts": {
+    "unlink": "rimraf .git",
+    "build": "npm pack"
+  },
+  "author": "godicheol <godicheol@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "javascript"
+  ],
+  "devDependencies": {
+    "mkdirp": "^2.1.5",
+    "rimraf": "^4.4.0"
+  },
+  "dependencies": {},
+  "bundleDependencies": []
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>index.html</title>
+    <!-- <link rel="stylesheet" href="./style.css"> -->
+    <style>
+        html,body,h1,h2,h3,h4,h5,h6,p,span,ul,ol,li,table,thead,tbody,tr,th,td,img,canvas{
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        input,textarea,label{
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div>
+        <div id="container"></div>
+
+    </div>
+
+    <script src="./index.js"></script>
+    <script>
+        var table = new JsTable();
+
+        table.init(document.querySelector("#container"), {
+            name: {
+                title: "Name",
+                edit: true
+            },
+            index: {}
+        });
+
+        for (var i = 0; i < 100; i++) {
+            table.create({name: "John-" + i, index: i});
+        }
+
+        table.create({name: "John"});
+
+
+        // table.delete({index: {
+        //     $gt: 5
+        // }})
+
+        // table.create({name: "John-" + 100, index: 100});
+
+
+        console.log(table.read({}))
+    </script>
+</body>
+
+</html>
