@@ -27,31 +27,54 @@
 
     <script src="./index.js"></script>
     <script>
-        var table = new JsTable();
+        var table = new JsTable("container");
 
-        table.init(document.querySelector("#container"), {
-            name: {
-                title: "Name",
-                edit: true
+        table.init([
+            {
+                name: "name",
+                formatter: function(data) {
+                    var input = document.createElement("input");
+                    input.type = "string";
+                    input.value = data.name;
+                    input.addEventListener("change", function(e) {
+                        var newName = e.target.value;
+
+                        table.update(data, {
+                            name: newName
+                        });
+                    });
+                    return input;
+                }
             },
-            index: {}
-        });
+            {
+                name: "age",
+                formatter: function(data) {
+                    var input = document.createElement("input");
+                    input.type = "number";
+                    input.value = data.age || 0;
+                    input.addEventListener("change", function(e) {
+                        var newAge = e.target.value;
+
+                        table.update(data, {
+                            age: !isNaN(parseInt(newAge)) ? parseInt(newAge) : 0
+                        });
+                    });
+                    return input;
+                }
+            },
+            {
+                name: "extra",
+                formatter: function(data) {
+                    return !isNaN(parseInt(data.age)) ? parseInt(data.age) * 10 : 0;
+                }
+            }
+        ]);
 
         for (var i = 0; i < 100; i++) {
-            table.create({name: "John-" + i, index: i});
+            table.create({name: "John-" + i, age: i});
         }
 
         table.create({name: "John"});
-
-
-        // table.delete({index: {
-        //     $gt: 5
-        // }})
-
-        // table.create({name: "John-" + 100, index: 100});
-
-
-        console.log(table.read({}))
     </script>
 </body>
 

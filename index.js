@@ -25,32 +25,21 @@
 
     // type checkers
 
-    function isValidRecordArray(recordArray) {
-        if (getType(recordArray) !== "array") {
-            return false;
-        }
-        for (var record of recordArray) {
-            if (!isValidRecord(record)) {
-                return false;
-            }
-        }
-        return true;
-    }
     function isValidRecord(record) {
         if (getType(record) !== "object") {
             return false;
         }
-        var types = ["undefined", "null", "boolean", "number", "string"];
-        var values = Object.values(record);
-        for (var value of values) {
-            if (types.indexOf(getType(value)) < 0) {
-                return false;
-            }
-        }
+        // var types = ["undefined", "null", "boolean", "number", "string"];
+        // var values = Object.values(record);
+        // for (var value of values) {
+        //     if (types.indexOf(getType(value)) < 0) {
+        //         return false;
+        //     }
+        // }
         return true;
     }
     function isValidContainer(element) {
-        return getType(element) === "htmldivelement";
+        return getType(element) === "htmldivelement" || (getType(element) === "string" && document.getElementById(element));
     }
     function isValidColumns(columns) {
         if (getType(columns) !== "array") {
@@ -61,56 +50,15 @@
                 return false;
             }
             // required
-            if (getType(col.type) !== "string") {
+            if (getType(col.name) !== "string") {
                 return false;
             }
             // required
-            if (getType(col.field) !== "string") {
-                return false;
-            }
-            // optional
-            if (["undefined", "string"].indexOf(col.title) < 0) {
-                return false;
-            }
-            // optional
-            if (["undefined", "boolean"].indexOf(col.edit) < 0) {
-                return false;
-            }
-            // optional
-            if (["undefined", "function"].indexOf(col.format) < 0) {
+            if (getType(col.formatter) !== "function") {
                 return false;
             }
         }
         return true;
-    }
-
-    function renderCell(column, record) {
-        var cell = document.createElement("th");
-        var field = col.field;
-        var type = col.type; // boolean, number, string, link, image
-        var edit = col.edit;
-        var value = record[field];
-
-        if (type === "boolean") {
-            if (!edit) {
-                cell.innerHTML = value;
-            }
-        }
-
-        var cell = document.createElement("td");
-        var value = record[key];
-        var setter = setters[options.type];
-        if (!options.edit) {
-            cell.innerHTML = value;
-        } else {
-            var input = document.createElement("input");
-            input.addEventListener("change", editHandler);
-            input.setAttribute("data-key", key);
-            input.setAttribute("data-id", record._id);
-            input.value = formatter(value) || "";
-            cell.appendChild(input);
-        }
-        row.appendChild(cell);
     }
 
     // constructor
@@ -119,8 +67,11 @@
         if (!isValidContainer(element)) {
             throw new Error("Invalid argument type");
         }
-
-        this.container = element;
+        if (getType(element) === "htmldivelement") {
+            this.container = element;
+        } else {
+            this.container = document.getElementById(element);
+        }
         this.table = document.createElement("table");
         this.thead = document.createElement("thead");
         this.tbody = document.createElement("tbody");
@@ -139,23 +90,15 @@
         if (!isValidColumns(columns)) {
             throw new Error("Invalid argument type");
         }
+        if (!this.thead) {
+            throw new Error("Table head not found");
+        }
 
         // render table head
         var row = document.createElement("tr");
-        for (var col of this.columns) {
+        for (var col of columns) {
             var cell = document.createElement("th");
-            var title = col.title || col.field;
-            var field = col.field;
-            var type = col.type; // boolean, number, string, link, image
-
-            // if (!field) {
-            //     throw new Error("Invalid argument type");
-            // }
-            if (["boolean", "number", "string", "link", "image"].indexOf(type) < 0) {
-                throw new Error("Invalid argument type");
-            }
-
-            cell.innerHTML = title;
+            cell.innerHTML = col.name;
             row.appendChild(cell);
         }
 
@@ -169,71 +112,61 @@
             throw new Error("Table body not found");
         }
 
-        var editHandler = function(e) {
-            console.log(record);
-            // this.update({_id: _id}, {[key]: getter(e.target)});
-        }
-        editHandler = editHandler.bind(this);
-
         var row;
-        if (record.__element__) {
-            row = record.__element__;
+        if (record._element) {
+            row = record._element;
         } else {
             row = document.createElement("tr");
-            record.__element__ = row;
+            record._element = row;
             this.tbody.appendChild(row);
         }
 
+        // reset
         row.innerHTML = "";
+
         for (var col of this.columns) {
             var cell = document.createElement("th");
-            var title = col.title || col.field;
-            var field = col.field;
-            var type = col.type; // boolean, number, string, link, image
-
-
-
-
-            var cell = document.createElement("td");
-            var value = record[key];
-            var setter = setters[options.type];
-            if (!options.edit) {
-                cell.innerHTML = value;
+            var formatter = col.formatter;
+            // formatter = formatter.bind(record);
+            var elem = formatter(record);
+            if (/^html.*element$/i.test(getType(elem))) {
+                cell.appendChild(elem);
             } else {
-                var input = document.createElement("input");
-                input.addEventListener("change", editHandler);
-                input.setAttribute("data-key", key);
-                input.setAttribute("data-id", record._id);
-                input.value = formatter(value) || "";
-                cell.appendChild(input);
+                cell.innerHTML = elem;
             }
             row.appendChild(cell);
         }
     }
     JsTable.prototype.create = function(data) {
-        if (!isValidRecord(data) && !isValidRecordArray(data)) {
+        if (!isValidRecord(data)) {
             throw new Error("Invalid argument type", data);
         }
-
-        // to array
-        if (getType(data) === "object") {
-            data = [data];
+        if (getType(data._id) !== "undefined") {
+            throw new Error("data._id must be undefined");
         }
-        
+        if (getType(data._element) !== "undefined") {
+            throw new Error("data._element must be undefined");
+        }
         // push
-        for (var item of data) {
-            var record = Object.assign({ _id: generateObjectId(16) }, item);
-            this.data.push(record);
-            this.render(record);
-        }
-
+        var record = Object.assign({ _id: generateObjectId(16) }, data);
+        this.data.push(record);
+        this.render(record);
+        return record;
     }
     JsTable.prototype.read = function(query) {
-        return JSON.parse(JSON.stringify(this.data.filter(function(record) {
+        return this.data.filter(function(record) {
             return execQuery(record, query, true);
-        })));
+        }).map(function(record) {
+            return Object.assign({}, record);
+        });
     }
     JsTable.prototype.update = function(query, updates) {
+        if (getType(updates._id) !== "undefined") {
+            throw new Error("updates._id must be undefined");
+        }
+        if (getType(updates._element) !== "undefined") {
+            throw new Error("updates._element must be undefined");
+        }
         var data = this.data.filter(function(record) {
             return execQuery(record, query, true);
         });
@@ -247,28 +180,25 @@
         }
     }
     JsTable.prototype.delete = function(query) {
-        var ids = [];
-        var indexes = [];
-
         for (var i = this.data.length - 1; i >= 0; i--) {
             var record = this.data[i];
             if (execQuery(record, query, true)) {
-                ids.push(record._id);
-                indexes.push(i);
+                if (record._element) {
+                    record._element.parentNode.removeChild(record._element);
+                }
+                this.data.splice(i, 1);
             }
         }
-
-        for (var index of indexes) {
-            this.data.splice(index, 1);
-        }
-
-        for (var _id of ids) {
-            if (this.rows[_id]) {
-                this.rows[_id].parentNode.removeChild(this.rows[_id]);
-                delete this.rows[_id];
-            }
-        }
-
+    }
+    JsTable.prototype.export = function(query) {
+        return this.data.filter(function(record) {
+            return execQuery(record, query, true);
+        }).map(function(record) {
+            var obj = Object.assign({}, record);
+            delete obj._id;
+            delete obj._element;
+            return obj;
+        });
     }
 
     return JsTable;

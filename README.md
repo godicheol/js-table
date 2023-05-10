@@ -1,28 +1,121 @@
 ## Usage
 
-```console
-git clone https://github.com/godicheol/javascript-module-builder.git && cd javascript-module-builder && npm install && npm run unlink
+```html
+<div id="conatiner">
 ```
+
+- Initialize
 
 ```js
-// package.json
-...
-"bundleDependencies": [
-    // add installed library name
-]
-...
+// set container
+// 1.1
+var table = new JsTable("container");
+// 1.2
+var table = new JsTable(document.querySelector("#coutainer"));
+
+// set header
+// {
+//     name: "string",
+//     formatter: "function(record_data)"
+// }
+table.init([
+    {
+        name: "name",
+        formatter: function(data) {
+            var input = document.createElement("input");
+            input.type = "string";
+            input.value = data.name;
+            input.addEventListener("change", function(e) {
+                var newName = e.target.value;
+
+                table.update(data, {
+                    name: newName
+                });
+            });
+            return input;
+        }
+    },
+    {
+        name: "age",
+        formatter: function(data) {
+            var input = document.createElement("input");
+            input.type = "number";
+            input.value = data.age || 0;
+            input.addEventListener("change", function(e) {
+                var newAge = e.target.value;
+
+                table.update(data, {
+                    age: !isNaN(parseInt(newAge)) ? parseInt(newAge) : 0
+                });
+            });
+            return input;
+        }
+    },
+    {
+        name: "extra",
+        formatter: function(data) {
+            return !isNaN(parseInt(data.age)) ? parseInt(data.age) * 10 : 0;
+        }
+    }
+]);
 ```
 
-```console
-npm pack
-```
-
-```console
-npm install blah-blah.tgz
-```
+- Create record
 
 ```js
-import MyModule from 'javascript-module-builder';
-const {sum} = MyModule;
-sum(1, 2); // 3
+// data._id, data._element field must be undefined
+var data = { name: "John", age: 10 }
+table.create(data);
+// {
+//     name: "John",
+//     age: 10,
+//     _element: tr
+//     _id: "645aba632cbeb96cf46ad190"
+// }
+```
+
+- Read records
+
+```js
+var query = { name: "John" };
+table.read(query);
+// [{
+//     name: "John",
+//     age: 10,
+//     _element: tr
+//     _id: "645aba632cbeb96cf46ad190"
+// }]
+```
+
+- Update records
+
+```js
+// updates._id, updates._element field must be undefined
+var query = { _id: "645aba632cbeb96cf46ad190" };
+var updates = { age: 33 };
+table.update(query, updates);
+// {
+//     name: "John",
+//     age: 33,
+//     _element: tr
+//     _id: "645aba632cbeb96cf46ad190"
+// }
+```
+
+- Delete records
+
+```js
+var query = { _id: "645aba632cbeb96cf46ad190" };
+table.delete(query);
+```
+
+- Export records
+
+```js
+var query = {}; // select all records
+table.export(query);
+// [{
+//     name: "John",
+//     age: 33
+// }]
 ```
