@@ -16,11 +16,13 @@ var table = new JsTable(document.querySelector("#coutainer"));
 // set header
 // {
 //     name: "string",
+//     class: "string",
 //     formatter: "function(record_data)"
 // }
 table.init([
     {
         name: "name",
+        class: "js-table-name",
         formatter: function(data) {
             var input = document.createElement("input");
             input.type = "string";

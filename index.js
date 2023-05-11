@@ -84,6 +84,7 @@
 
         this.columns = []; // column settings
         this.data = []; // JSON data
+        this.length = 0; // data.length
     }
     // <div> only
     JsTable.prototype.init = function(columns) {
@@ -99,6 +100,7 @@
         for (var col of columns) {
             var cell = document.createElement("th");
             cell.innerHTML = col.name;
+            cell.className = col.class || "";
             row.appendChild(cell);
         }
 
@@ -106,7 +108,10 @@
         this.thead.innerHTML = "";
         this.thead.appendChild(row);
     }
-
+    JsTable.prototype.countRecords = function() {
+        this.length = this.data.length;
+        return this.length;
+    }
     JsTable.prototype.render = function(record) {
         if (!this.tbody) {
             throw new Error("Table body not found");
@@ -125,7 +130,8 @@
         row.innerHTML = "";
 
         for (var col of this.columns) {
-            var cell = document.createElement("th");
+            var cell = document.createElement("td");
+            cell.className = col.class || "";
             var formatter = col.formatter;
             // formatter = formatter.bind(record);
             var elem = formatter(record);
@@ -151,6 +157,7 @@
         var record = Object.assign({ _id: generateObjectId(16) }, data);
         this.data.push(record);
         this.render(record);
+        this.countRecords();
         return record;
     }
     JsTable.prototype.read = function(query) {
@@ -189,6 +196,7 @@
                 this.data.splice(i, 1);
             }
         }
+        this.countRecords();
     }
     JsTable.prototype.export = function(query) {
         return this.data.filter(function(record) {
