@@ -1,7 +1,7 @@
 ## Usage
 
 ```html
-<div id="conatiner">
+<div id="container">
 ```
 
 - Initialize
@@ -11,13 +11,13 @@
 // 1.1
 var table = new JsTable("container");
 // 1.2
-var table = new JsTable(document.querySelector("#coutainer"));
+var table = new JsTable(document.querySelector("#container"));
 
 // set header
 // {
 //     name: "string",
 //     class: "string",
-//     formatter: "function(record_data)"
+//     formatter: "function(record_data)" // return DOM Element or String
 // }
 table.init([
     {
@@ -29,7 +29,6 @@ table.init([
             input.value = data.name;
             input.addEventListener("change", function(e) {
                 var newName = e.target.value;
-
                 table.update(data, {
                     name: newName
                 });
@@ -120,4 +119,18 @@ table.export(query);
 //     name: "John",
 //     age: 33
 // }]
+```
+
+- Count records
+
+```js
+table.length; // return number
+```
+
+- Sort records
+
+```js
+table.sort(function(a, b) {
+    return a.age - b.age;
+});
 ```

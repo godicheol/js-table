@@ -60,6 +60,55 @@
         }
         return true;
     }
+    function createResizeBar() {
+        var div = document.createElement("div");
+        div.style.top = "0px";
+        div.style.right = "0px";
+        div.style.width = "10px";
+        div.style.position = "absolute";
+        div.style.cursor = "col-resize";
+        div.style.userSelect = "none";
+        div.style.zIndex = "1000";
+        div.style.height = "0px";
+        setResizeHandlers(div);
+        return div;
+    }
+    function setResizeHandlers(element) {
+        var pageX, currElement, nextElement, currWidth, nextWidth;
+        element.addEventListener("mousedown", resizeStartHandler);
+        document.addEventListener("mousemove", resizeMoveHandler);
+        document.addEventListener("mouseup", resizeEndHandler);
+        function resizeStartHandler(e) {
+            e.preventDefault();
+            currElement = e.target.parentNode;
+            nextElement = currElement.nextElementSibling;
+            pageX = e.pageX;
+            currWidth = currElement.offsetWidth;
+            if (nextElement) {
+                nextWidth = nextElement.offsetWidth;
+            }
+        }
+        function resizeMoveHandler(e) {
+            if (currElement) {
+                e.preventDefault();
+                document.documentElement.style.cursor = "col-resize";
+                var diffX = e.pageX - pageX;
+                if (nextElement) {
+                    nextElement.style.width = (nextWidth - diffX) + "px";
+                }
+                currElement.style.width = (currWidth + diffX) + "px";
+            }
+        }
+        function resizeEndHandler(e) {
+            e.preventDefault();
+            document.documentElement.style.cursor = "";
+            pageX = undefined;
+            currElement = undefined;
+            nextElement = undefined;
+            currWidth = undefined;
+            nextWidth = undefined;
+        }
+    }
 
     // constructor
 
@@ -82,6 +131,7 @@
         this.table.appendChild(this.tfoot);
         this.container.appendChild(this.table);
 
+        this.isInitialized = false;
         this.columns = []; // column settings
         this.data = []; // JSON data
         this.length = 0; // data.length
@@ -91,30 +141,82 @@
         if (!isValidColumns(columns)) {
             throw new Error("Invalid argument type");
         }
+        if (!this.table) {
+            throw new Error("Table not found");
+        }
         if (!this.thead) {
             throw new Error("Table head not found");
         }
+        if (this.isInitialized) {
+            throw new Error("Table already initialized");
+        }
 
         // render table head
+        var hasObserver = typeof(ResizeObserver) !== "undefined";
+        var bars = [];
         var row = document.createElement("tr");
-        for (var col of columns) {
+        for (var i = 0; i < columns.length; i++) {
+            var col = columns[i];
             var cell = document.createElement("th");
+            cell.style.position = "relative";
             cell.innerHTML = col.name;
             cell.className = col.class || "";
+            if (hasObserver) {
+                var bar = createResizeBar();
+                bars.push(bar);
+                cell.appendChild(bar);
+            }
             row.appendChild(cell);
         }
 
         this.columns = columns;
         this.thead.innerHTML = "";
         this.thead.appendChild(row);
+        this.isInitialized = true;
+
+        if (hasObserver) {
+            var observer = new ResizeObserver(entries => {
+                for (var entry of entries) {
+                    var height = entry.contentRect.height;
+                    for (var bar of bars) {
+                        bar.style.height = height + "px";
+                    }
+                }
+            });
+    
+            observer.observe(this.table);
+        }
     }
     JsTable.prototype.countRecords = function() {
         this.length = this.data.length;
         return this.length;
     }
+    JsTable.prototype.sort = function(compareFunc) {
+        this.data = this.data.sort(compareFunc);
+        this.rerender();
+    }
+    JsTable.prototype.rerender = function() {
+        if (!this.tbody) {
+            throw new Error("Table body not found");
+        }
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
+
+        // reset
+        this.tbody.innerHTML = "";
+
+        for (var record of this.data) {
+            record._element = null;
+            this.render(record);
+        }
+    }
     JsTable.prototype.render = function(record) {
         if (!this.tbody) {
             throw new Error("Table body not found");
+        }
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
         }
 
         var row;
@@ -144,6 +246,9 @@
         }
     }
     JsTable.prototype.create = function(data) {
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
         if (!isValidRecord(data)) {
             throw new Error("Invalid argument type", data);
         }
@@ -161,6 +266,9 @@
         return record;
     }
     JsTable.prototype.read = function(query) {
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
         return this.data.filter(function(record) {
             return execQuery(record, query, true);
         }).map(function(record) {
@@ -168,6 +276,9 @@
         });
     }
     JsTable.prototype.update = function(query, updates) {
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
         if (getType(updates._id) !== "undefined") {
             throw new Error("updates._id must be undefined");
         }
@@ -187,6 +298,9 @@
         }
     }
     JsTable.prototype.delete = function(query) {
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
         for (var i = this.data.length - 1; i >= 0; i--) {
             var record = this.data[i];
             if (execQuery(record, query, true)) {
@@ -199,6 +313,9 @@
         this.countRecords();
     }
     JsTable.prototype.export = function(query) {
+        if (!this.isInitialized) {
+            throw new Error("Table has not been initialized");
+        }
         return this.data.filter(function(record) {
             return execQuery(record, query, true);
         }).map(function(record) {
