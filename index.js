@@ -64,7 +64,7 @@
         var div = document.createElement("div");
         div.style.top = "0px";
         div.style.right = "0px";
-        div.style.width = "10px";
+        div.style.width = "7px";
         div.style.position = "absolute";
         div.style.cursor = "col-resize";
         div.style.userSelect = "none";
